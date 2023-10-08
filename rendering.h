@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+#include <memory>
 #include <thread>
 
 const size_t worker_count = std::thread::hardware_concurrency();
@@ -45,6 +47,9 @@ struct Fractal {
 
     void init(size_t _width, size_t _height){
         workers.resize(worker_count);
+        for (size_t i = 0; i < worker_count; ++i) {
+            workers[i] = std::make_unique<Worker>();
+        }
 
         width = _width;
         height = _height;
@@ -84,7 +89,7 @@ struct Fractal {
         abortRender();
         lockTexture();
         for (size_t i = 0; i < workers.size(); i++){
-            workers[i].begin(i, renders);
+            workers[i]->begin(i, renders);
         }
         renders++;
     }
@@ -93,21 +98,21 @@ struct Fractal {
         abortRender();
         lockTexture();
         for (size_t i = 0; i < workers.size(); i++){
-            workers[i].beginAntiAlias(i, renders);
+            workers[i]->beginAntiAlias(i, renders);
         }
         renders++;
     }
 
     void abortRender(){
         for (size_t i = 0; i < workers.size(); i++){
-            workers[i].abort();
+            workers[i]->abort();
         }
         unlockTexture();
     }
 
     bool isComplete(){
         for (size_t i = 0; i < workers.size(); i++){
-            if (!workers[i].isComplete()){
+            if (!workers[i]->isComplete()){
                 return false;
             }
         }
@@ -116,7 +121,7 @@ struct Fractal {
 
     bool isAntiAliased(){
         for (size_t i = 0; i < workers.size(); i++){
-            if (!workers[i].isAntiAliased()){
+            if (!workers[i]->isAntiAliased()){
                 return false;
             }
         }
@@ -129,7 +134,7 @@ struct Fractal {
         }
         size_t sum = 0;
         for (size_t i = 0; i < worker_count; i++){
-            sum += workers[i].getPixelsRendered();
+            sum += workers[i]->getPixelsRendered();
         }
         return sum / (double)(g_fractal().w() * g_fractal().h());
     }
@@ -175,18 +180,18 @@ struct Fractal {
 
     void renderLock(){
         for (size_t i = 0; i < workers.size(); i++){
-            workers[i].pause();
+            workers[i]->pause();
         }
         for (size_t i = 0; i < workers.size(); i++){
-            while (!workers[i].isWaiting()){
-
+            while (!workers[i]->isWaiting()){
+                // TODO: fix this busy wait?
             }
         }
     }
 
     void renderUnlock(){
         for (size_t i = 0; i < workers.size(); i++){
-            workers[i].resume();
+            workers[i]->resume();
         }
     }
 
@@ -270,6 +275,10 @@ struct Fractal {
     size_t renders = 0;
 
     struct Worker {
+        Worker() {
+
+        }
+
         void begin(int offset, int carryover){
             abort();
             data.offset = offset;
@@ -329,13 +338,13 @@ struct Fractal {
         struct Data {
             int offset = 0;
             int carryover = 0;
-            volatile bool complete = true;
-            volatile bool abort = false;
-            volatile bool pause = false;
-            volatile bool waiting = false;
-            volatile bool antialias = false;
-            volatile bool antialias_complete = false;
-            volatile Uint32 pixels_rendered = 0;
+            std::atomic<bool> complete = true;
+            std::atomic<bool> abort = false;
+            std::atomic<bool> pause = false;
+            std::atomic<bool> waiting = false;
+            std::atomic<bool> antialias = false;
+            std::atomic<bool> antialias_complete = false;
+            std::atomic<Uint32> pixels_rendered = 0;
         };
         Data data;
         std::thread thread;
@@ -499,7 +508,7 @@ struct Fractal {
             return g_fractal().params.gradient.getColorAt(it / g_fractal().params.iteration_limit).toInt();
         }
     };
-    std::vector<Worker> workers;
+    std::vector<std::unique_ptr<Worker>> workers;
 };
 
 Fractal g_fractal_instance = {};
