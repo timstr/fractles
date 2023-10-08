@@ -17,19 +17,19 @@
 
 #include "fractalwindow.h"
 
-int main(int argc, char** args){
+int main(){
 
-	GUI::init(Pos(1000, 700), "Fractles");
+    GUI::init(Pos(1000, 700), "Fractles");
 
-	g_fractal().init(1000, 700);
+    g_fractal().init(1000, 700);
 
-	FractalWindow* fractal_window = new FractalWindow();
+    FractalWindow* fractal_window = new FractalWindow();
 
-	GUI::rootwindow.addElement(fractal_window);
+    GUI::rootwindow.addElement(fractal_window);
 
-	fractal_window->grabFocus();
+    fractal_window->grabFocus();
 
-	GUI::run();
+    GUI::run();
 
-	return 0;
+    return 0;
 }
