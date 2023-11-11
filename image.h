@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+#include <exception>
 #include <iostream>
 #include <string>
 #include <drawing.h>
@@ -164,7 +166,18 @@ struct Image {
             return;
         }
 
-        SDL_PixelFormat format = *SDL_GetWindowSurface(window)->format;
+        assert(window);
+        SDL_Surface const* window_surface = SDL_GetWindowSurface(window);
+        if (!window_surface) {
+            auto msg = std::string("Failed to get SDL window surface: ") + SDL_GetError();
+            SDL_ClearError();
+            throw std::runtime_error(msg);
+            
+        }
+        assert(window_surface);
+        SDL_PixelFormat const* window_surface_format = window_surface->format;
+        assert(window_surface_format);
+        SDL_PixelFormat format = *window_surface_format;
 
         format.format = SDL_PIXELFORMAT_ARGB8888;
         format.Amask = 0xFF000000;

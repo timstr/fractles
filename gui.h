@@ -533,8 +533,20 @@ namespace GUI {
         SDL_Init(SDL_INIT_EVERYTHING);
         IMG_Init(IMG_INIT_PNG);
 
-        window = SDL_CreateWindow(name.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Context.screensize.x, Context.screensize.y, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+        window = SDL_CreateWindow(
+            name.c_str(),
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            Context.screensize.x,
+            Context.screensize.y,
+            SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        );
+        renderer = SDL_CreateRenderer(
+            window,
+            -1,
+            // SDL_RENDERER_ACCELERATED
+            SDL_RENDERER_SOFTWARE
+        );
         SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
         srand(unsigned(time(nullptr)));
 
