@@ -140,28 +140,33 @@ struct Fractal {
     }
 
     void save(){
-        if (isComplete() && isAntiAliased()){
-            if (!texture){
-                throw;
-            }
-
-            SDL_Surface* surface = SDL_CreateRGBSurface(0, width, height, 32, 0xFF0000, 0xFF00, 0xFF, 0xFF000000);
-
-            for (size_t x = 0; x < width; x++){
-                for (size_t y = 0; y < height; y++){
-                    ((Uint32*)surface->pixels)[(y * surface->pitch / sizeof(Uint32)) + x] = pixel_data[(y * pitch) + x];
-                }
-            }
-
-            auto t = std::time(nullptr);
-            auto tm = *std::localtime(&t);
-            std::stringstream ss;
-            ss << "Fractal " << std::put_time(&tm, "%d-%m-%Y %H-%M-%S") << ".png";
-
-            IMG_SavePNG(surface, ss.str().c_str());
-
-            SDL_FreeSurface(surface);
+        if (!isComplete() || !isAntiAliased()){
+            return;
         }
+
+        if (!texture){
+            throw std::runtime_error("No texture?");
+        }
+
+        SDL_Surface* surface = SDL_CreateRGBSurface(0, width, height, 32, 0xFF0000, 0xFF00, 0xFF, 0xFF000000);
+
+        for (size_t x = 0; x < width; x++){
+            for (size_t y = 0; y < height; y++){
+                ((Uint32*)surface->pixels)[(y * surface->pitch / sizeof(Uint32)) + x] = pixel_data[(y * pitch) + x];
+            }
+        }
+
+        auto t = std::time(nullptr);
+        auto tm = *std::localtime(&t);
+        std::stringstream ss;
+        ss << "Fractal " << std::put_time(&tm, "%d-%m-%Y %H-%M-%S") << ".png";
+        const std::string path = ss.str();
+
+        IMG_SavePNG(surface, path.c_str());
+
+        std::cout << "Saved " << width << 'x' << height << " image to \"" << path << "\"" << std::endl;
+
+        SDL_FreeSurface(surface);
     }
 
     void render(){

@@ -119,6 +119,12 @@ struct FractalWindow : GUI::Window {
             case SDL_SCANCODE_TAB:
                 actual_size = !actual_size;
                 break;
+            case SDL_SCANCODE_SPACE:
+                toggle_tool_visibility();
+                break;
+            case SDL_SCANCODE_RETURN:
+                g_fractal().save();
+                break;
             default:
                 break;
         }
@@ -184,6 +190,8 @@ struct FractalWindow : GUI::Window {
         for (size_t i = 0; i < elements.size(); i++){
             elements[i]->visible = true;
         }
+        showhidebtn->show = true;
+        showhidebtn->updateCaption();
     }
 
     void hide(){
@@ -191,6 +199,16 @@ struct FractalWindow : GUI::Window {
             elements[i]->visible = false;
         }
         showhidebtn->visible = true;
+        showhidebtn->show = false;
+        showhidebtn->updateCaption();
+    }
+
+    void toggle_tool_visibility() {
+        if (showhidebtn->show) {
+            hide();
+        } else {
+            show();
+        }
     }
 
     bool actual_size = true;
@@ -210,6 +228,9 @@ struct FractalWindow : GUI::Window {
             } else {
                 fractal_window.hide();
             }
+            
+        }
+        void updateCaption() {
             caption->setText(show ? "Hide Tools" : "Show Tools");
             rect.w = caption->rect.w;
         }
@@ -225,9 +246,7 @@ struct FractalWindow : GUI::Window {
             rect = Rect(caption->rect.size());
         }
         void onLeftClick(int /*clicks*/) override {
-            if (g_fractal().isComplete() && g_fractal().isAntiAliased()){
-                g_fractal().save();
-            }
+            g_fractal().save();
         }
         void render(Pos offset){
             if (g_fractal().isComplete()){
