@@ -9,26 +9,14 @@ PKG_SEARCH_MODULE(SDL2IMAGE REQUIRED SDL2_image>=2.0.0)
 
 add_executable(
     fractles
-    Fractles.cpp
-
-    drawing.h
-    gradient.h
-    gradienteditor.h
-    gui.h
-    image.h
-    mycolors.h
-    mymaths.h
-    parameditor.h
-    rendering.h
-    textrenderer.h
-    uicomponents.h
+    src/Fractles.cpp
 )
 
 target_include_directories(
     fractles
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
     PUBLIC ${SDL2_INCLUDE_DIRS}
-    PUBLIC ${SDL2IAMGE_INCLUDE_DIRS}
+    PUBLIC ${SDL2IMAGE_INCLUDE_DIRS}
 )
 
 target_link_libraries(fractles PUBLIC ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES})
