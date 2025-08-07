@@ -17,11 +17,15 @@
 
 #include "fractalwindow.h"
 
-int main(){
-
+int main(int argc, char** argv){
     GUI::init(Pos(1000, 700), "Fractles");
 
-    g_fractal().init(1000, 700);
+    std::optional<std::string> json_path = std::nullopt;
+    if (argc == 2) {
+        json_path = std::string(argv[1]);
+    }
+
+    g_fractal().init(1000, 700, json_path);
 
     FractalWindow* fractal_window = new FractalWindow();
 

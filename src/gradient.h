@@ -6,6 +6,8 @@
 #include <mymaths.h>
 #include <vector>
 
+#include <json.hpp>
+
 struct Gradient {
     struct ColorNode {
         Color color;
@@ -74,6 +76,37 @@ struct Gradient {
             delete nodes[i];
         }
         nodes.clear();
+    }
+
+    nlohmann::json to_json() const {
+        auto j = nlohmann::json::array();
+
+        for (ColorNode* n : this->nodes) {
+            auto nj = nlohmann::json::object();
+            nj["r"] = n->color.getR();
+            nj["g"] = n->color.getG();
+            nj["b"] = n->color.getB();
+            nj["pos"] = n->pos;
+            j.push_back(std::move(nj));
+        }
+
+        return j;
+    }
+
+    void from_json(const nlohmann::json& j) {
+        this->clear();
+
+        for (auto it = j.begin(); it != j.end(); ++it) {
+            const auto& nj = *it;
+            addNode(
+                ColorRGBA(
+                    nj["r"].get<double>(),
+                    nj["g"].get<double>(),
+                    nj["b"].get<double>()
+                ),
+                nj["pos"].get<double>()
+            );
+        }
     }
 
     std::vector<ColorNode*> nodes;
@@ -250,5 +283,5 @@ struct Gradient {
 
     std::vector<ColorPos> gradient;
 };*/
-    
+
 #endif

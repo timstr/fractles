@@ -1,8 +1,12 @@
 #pragma once
 
 #include <atomic>
+#include <fstream>
 #include <memory>
+#include <optional>
 #include <thread>
+
+#include <json.hpp>
 
 const size_t worker_count = std::thread::hardware_concurrency();
 
@@ -42,10 +46,81 @@ struct Fractal {
         double C_multiplier_r = 1.0;
         double C_multiplier_i = 0.0;
         Gradient gradient;
+
+        nlohmann::json to_json() const {
+            auto j = nlohmann::json::object();
+            j["x_offset"] = this->x_offset;
+            j["y_offset"] = this->y_offset;
+            j["magnification"] = this->magnification;
+            j["rotation"] = this->rotation;
+            j["iteration_limit"] = this->iteration_limit;
+            j["escape_limit"] = this->escape_limit;
+            j["Z_init"] = this->Z_init;
+            j["julia"] = this->julia;
+            j["julia_r"] = this->julia_r;
+            j["julia_i"] = this->julia_i;
+            j["J_multiply"] = this->J_multiply;
+            j["J_multiplier_r"] = this->J_multiplier_r;
+            j["J_multiplier_i"] = this->J_multiplier_i;
+            j["square_Z"] = this->square_Z;
+            j["pre_add"] = this->pre_add;
+            j["mid_add"] = this->mid_add;
+            j["post_add"] = this->post_add;
+            j["box_reflect"] = this->box_reflect;
+            j["box_reflect_scale"] = this->box_reflect_scale;
+            j["ring_reflect"] = this->ring_reflect;
+            j["ring_reflect_scale"] = this->ring_reflect_scale;
+            j["sponge"] = this->sponge;
+            j["sponginess"] = this->sponginess;
+            j["Z_multiply"] = this->Z_multiply;
+            j["Z_multiplier_r"] = this->Z_multiplier_r;
+            j["Z_multiplier_i"] = this->Z_multiplier_i;
+            j["C_multiply"] = this->C_multiply;
+            j["C_multiplier_r"] = this->C_multiplier_r;
+            j["C_multiplier_i"] = this->C_multiplier_i;
+
+            j["gradient"] = this->gradient.to_json();
+
+            return j;
+        }
+
+        void from_json(const nlohmann::json& j) {
+            this->x_offset = j["x_offset"].get<double>();
+            this->y_offset = j["y_offset"].get<double>();
+            this->magnification = j["magnification"].get<double>();
+            this->rotation = j["rotation"].get<double>();
+            this->iteration_limit = j["iteration_limit"].get<double>();
+            this->escape_limit = j["escape_limit"].get<double>();
+            this->Z_init = j["Z_init"].get<bool>();
+            this->julia = j["julia"].get<bool>();
+            this->julia_r = j["julia_r"].get<double>();
+            this->julia_i = j["julia_i"].get<double>();
+            this->J_multiply = j["J_multiply"].get<bool>();
+            this->J_multiplier_r = j["J_multiplier_r"].get<double>();
+            this->J_multiplier_i = j["J_multiplier_i"].get<double>();
+            this->square_Z = j["square_Z"].get<bool>();
+            this->pre_add = j["pre_add"].get<bool>();
+            this->mid_add = j["mid_add"].get<bool>();
+            this->post_add = j["post_add"].get<bool>();
+            this->box_reflect = j["box_reflect"].get<bool>();
+            this->box_reflect_scale = j["box_reflect_scale"].get<double>();
+            this->ring_reflect = j["ring_reflect"].get<bool>();
+            this->ring_reflect_scale = j["ring_reflect_scale"].get<double>();
+            this->sponge = j["sponge"].get<bool>();
+            this->sponginess = j["sponginess"].get<double>();
+            this->Z_multiply = j["Z_multiply"].get<bool>();
+            this->Z_multiplier_r = j["Z_multiplier_r"].get<double>();
+            this->Z_multiplier_i = j["Z_multiplier_i"].get<double>();
+            this->C_multiply = j["C_multiply"].get<bool>();
+            this->C_multiplier_r = j["C_multiplier_r"].get<double>();
+            this->C_multiplier_i = j["C_multiplier_i"].get<double>();
+
+            this->gradient.from_json(j["gradient"]);
+        }
     } params;
     bool rerender = true;
 
-    void init(size_t _width, size_t _height){
+    void init(size_t _width, size_t _height, std::optional<std::string> json_path){
         workers.resize(worker_count);
         for (size_t i = 0; i < worker_count; ++i) {
             workers[i] = std::make_unique<Worker>();
@@ -57,7 +132,12 @@ struct Fractal {
         texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
         SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 
-        params.gradient.randomize(5 + rand() % 11);
+        if (json_path.has_value()) {
+            auto f = std::ifstream(*json_path);
+            params.from_json(nlohmann::json::parse(f));
+        } else {
+            params.gradient.randomize(5 + rand() % 11);
+        }
     }
     ~Fractal(){
         abortRender();
@@ -159,14 +239,18 @@ struct Fractal {
         auto t = std::time(nullptr);
         auto tm = *std::localtime(&t);
         std::stringstream ss;
-        ss << "Fractal " << std::put_time(&tm, "%d-%m-%Y %H-%M-%S") << ".png";
-        const std::string path = ss.str();
+        ss << "Fractal " << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+        const std::string path_without_ext = ss.str();
 
-        IMG_SavePNG(surface, path.c_str());
-
-        std::cout << "Saved " << width << 'x' << height << " image to \"" << path << "\"" << std::endl;
+        IMG_SavePNG(surface, (path_without_ext + ".png").c_str());
 
         SDL_FreeSurface(surface);
+
+        auto o = std::ofstream(path_without_ext + ".json");
+        o << this->params.to_json() << std::endl;
+
+        std::cout << "Saved " << width << 'x' << height << " image to \"" << path_without_ext << "\"" << std::endl;
+
     }
 
     void render(){
