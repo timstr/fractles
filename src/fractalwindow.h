@@ -228,7 +228,7 @@ struct FractalWindow : GUI::Window {
             } else {
                 fractal_window.hide();
             }
-            
+
         }
         void updateCaption() {
             caption->setText(show ? "Hide Tools" : "Show Tools");
@@ -250,13 +250,13 @@ struct FractalWindow : GUI::Window {
         }
         void render(Pos offset){
             if (g_fractal().isComplete()){
-                drawColor(0xFFFFFFFF);
+                drawColor(0xFF80FF80);
                 drawRect(rect + offset);
             } else {
                 int x = g_fractal().getProgress() * rect.w;
                 drawColor(0xFF404040);
                 drawRect(Rect(rect.x + x, rect.y, rect.w - x, rect.h));
-                drawColor(0xFFFFFFFF);
+                drawColor(0xFF808000);
                 drawRect(Rect(rect.x, rect.y, x, rect.h));
             }
 
