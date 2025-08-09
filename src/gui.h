@@ -599,8 +599,9 @@ namespace GUI {
                                 Context.current_window->onLeftRelease();
                             }
                             if (Context.dragging_window){
-                                Window* hover_window = rootwindow.windowAt(Context.mouse_pos);
-                                hover_window->onreleaseElement(Context.dragging_window);
+                                if (Window* hover_window = rootwindow.windowAt(Context.mouse_pos)) {
+                                    hover_window->onreleaseElement(Context.dragging_window);
+                                }
                                 Context.dragging_window = nullptr;
                             }
                         }
@@ -609,8 +610,9 @@ namespace GUI {
                                 Context.current_window->onRightRelease();
                             }
                             if (Context.dragging_window){
-                                Window* hover_window = rootwindow.windowAt(Context.mouse_pos);
-                                hover_window->onreleaseElement(Context.dragging_window);
+                                if (Window* hover_window = rootwindow.windowAt(Context.mouse_pos)) {
+                                    hover_window->onreleaseElement(Context.dragging_window);
+                                }
                                 Context.dragging_window = nullptr;
                             }
                         }
