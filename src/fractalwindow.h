@@ -7,6 +7,8 @@ struct FractalWindow : GUI::Window {
     FractalWindow(){
         rect = Rect(1000, 700);
 
+        Fractal::Parameters& params = g_fractal().params;
+
         int y = 10;
 
         addElement(Pos(10, y), showhidebtn = new ShowHideBtn(*this));
@@ -14,48 +16,63 @@ struct FractalWindow : GUI::Window {
         addElement(Pos(190, y), size_editor = new SizeEditor(*this));
         y += 30;
 
-        addElement(Pos(10, y), new Switch(g_fractal().params.square_Z));
-        addElement(Pos(60, y), new Switch(g_fractal().params.Z_init));
-
-        addElement(Pos(270, y), gradient_editor = new GradientEditor(g_fractal().params.gradient));
+        addElement(Pos(10, y), new Switch(params.square_Z));
+        addElement(Pos(60, y), new Switch(params.Z_init));
         y += 30;
 
-        addElement(Pos(10, y + 15), new Switch(g_fractal().params.julia));
-        addElement(Pos(60, y), new Slider1D(g_fractal().params.julia_r, -2, 2, 200, "Julia R"));
-        addElement(Pos(60, y + 30), new Slider1D(g_fractal().params.julia_i, -2, 2, 200, "Julia I"));
+        if (!params.texture.has_value()) {
+            gradient_editor = new GradientEditor(params.gradient);
+            addElement(Pos(270, y), gradient_editor);
+        }
+
+        addElement(Pos(10, y + 15), new Switch(params.julia));
+        addElement(Pos(60, y), new Slider1D(params.julia_r, -2, 2, 200, "Julia R"));
+        addElement(Pos(60, y + 30), new Slider1D(params.julia_i, -2, 2, 200, "Julia I"));
         y += 60;
 
-        addElement(Pos(10, y + 15), new Switch(g_fractal().params.J_multiply));
-        addElement(Pos(60, y), new Slider1D(g_fractal().params.J_multiplier_r, -2, 2, 200, "Julia multi R"));
-        addElement(Pos(60, y + 30), new Slider1D(g_fractal().params.J_multiplier_i, -2, 2, 200, "Julia multi I"));
+        addElement(Pos(10, y + 15), new Switch(params.J_multiply));
+        addElement(Pos(60, y), new Slider1D(params.J_multiplier_r, -2, 2, 200, "Julia multi R"));
+        addElement(Pos(60, y + 30), new Slider1D(params.J_multiplier_i, -2, 2, 200, "Julia multi I"));
         y += 60;
 
-        addElement(Pos(60, y), new Switch(g_fractal().params.pre_add));
-        addElement(Pos(110, y), new Switch(g_fractal().params.mid_add));
-        addElement(Pos(160, y), new Switch(g_fractal().params.post_add));
+        addElement(Pos(60, y), new Switch(params.pre_add));
+        addElement(Pos(110, y), new Switch(params.mid_add));
+        addElement(Pos(160, y), new Switch(params.post_add));
         y += 30;
 
-        addElement(Pos(10, y), new Switch(g_fractal().params.sponge));
-        addElement(Pos(60, y), new Slider1D(g_fractal().params.sponginess, -2, 2, 200, "Sponginess"));
+        addElement(Pos(10, y), new Switch(params.sponge));
+        addElement(Pos(60, y), new Slider1D(params.sponginess, -2, 2, 200, "Sponginess"));
         y += 30;
 
-        addElement(Pos(10, y), new Switch(g_fractal().params.box_reflect));
-        addElement(Pos(60, y), new Slider1D(g_fractal().params.box_reflect_scale, -2, 2, 200, "Box Reflect"));
+        addElement(Pos(10, y), new Switch(params.box_reflect));
+        addElement(Pos(60, y), new Slider1D(params.box_reflect_scale, -2, 2, 200, "Box Reflect"));
         y += 30;
 
-        addElement(Pos(10, y), new Switch(g_fractal().params.ring_reflect));
-        addElement(Pos(60, y), new Slider1D(g_fractal().params.ring_reflect_scale, -2, 2, 200, "Ring Reflect"));
+        addElement(Pos(10, y), new Switch(params.ring_reflect));
+        addElement(Pos(60, y), new Slider1D(params.ring_reflect_scale, -2, 2, 200, "Ring Reflect"));
         y += 30;
 
-        addElement(Pos(10, y + 15), new Switch(g_fractal().params.Z_multiply));
-        addElement(Pos(60, y), new Slider1D(g_fractal().params.Z_multiplier_r, -2, 2, 200, "Z multi R"));
-        addElement(Pos(60, y + 30), new Slider1D(g_fractal().params.Z_multiplier_i, -2, 2, 200, "Z multi I"));
+        addElement(Pos(10, y + 15), new Switch(params.Z_multiply));
+        addElement(Pos(60, y), new Slider1D(params.Z_multiplier_r, -2, 2, 200, "Z multi R"));
+        addElement(Pos(60, y + 30), new Slider1D(params.Z_multiplier_i, -2, 2, 200, "Z multi I"));
         y += 60;
 
-        addElement(Pos(10, y + 15), new Switch(g_fractal().params.C_multiply));
-        addElement(Pos(60, y), new Slider1D(g_fractal().params.C_multiplier_r, -2, 2, 200, "C multi R"));
-        addElement(Pos(60, y + 30), new Slider1D(g_fractal().params.C_multiplier_i, -2, 2, 200, "C multi I"));
+        addElement(Pos(10, y + 15), new Switch(params.C_multiply));
+        addElement(Pos(60, y), new Slider1D(params.C_multiplier_r, -2, 2, 200, "C multi R"));
+        addElement(Pos(60, y + 30), new Slider1D(params.C_multiplier_i, -2, 2, 200, "C multi I"));
         y += 60;
+
+        addElement(Pos(10, y + 15), new Switch(params.shade));
+        addElement(Pos(60, y), new Slider1D(params.highlight_strength, 0, 1, 200, "Highlight"));
+        addElement(Pos(60, y + 30), new Slider1D(params.shade_strength, 0, 1, 200, "Shade"));
+        y += 60;
+
+        if (params.texture.has_value()) {
+            addElement(Pos(60, y), new Slider1D(params.texture_x_offset, 0, 1, 95, "x offset"));
+            addElement(Pos(165, y), new Slider1D(params.texture_x_scale, 0, 5, 95, "x scale"));
+            addElement(Pos(60, y + 30), new Slider1D(params.texture_y_offset, 0, 1, 95, "y offset"));
+            addElement(Pos(165, y + 30), new Slider1D(params.texture_y_scale, 0, 5, 95, "y scale"));
+        }
     }
 
     struct Grabber : GUI::Window {
@@ -86,7 +103,9 @@ struct FractalWindow : GUI::Window {
     };
 
     void onRightClick(int clicks) override {
-        gradient_editor->color_editor->hide();
+        if (gradient_editor) {
+            gradient_editor->color_editor->hide();
+        }
         if (clicks == 1){
             Grabber* grabber = new Grabber(*this);
             addElement(grabber);
@@ -98,7 +117,9 @@ struct FractalWindow : GUI::Window {
     }
 
     void onLeftClick(int clicks){
-        gradient_editor->color_editor->hide();
+        if (gradient_editor) {
+            gradient_editor->color_editor->hide();
+        }
         if (clicks == 1){
             // TODO: add a new colour stripe to the gradient where the fractal was clicked
         } else if (clicks >= 2){
@@ -113,8 +134,10 @@ struct FractalWindow : GUI::Window {
                 g_fractal().abortRender();
                 break;
             case SDL_SCANCODE_R:
-                gradient_editor->randomize(3 + rand() % 27);
-                g_fractal().rerender = true;
+                if (gradient_editor) {
+                    gradient_editor->randomize(3 + rand() % 27);
+                    g_fractal().rerender = true;
+                }
                 break;
             case SDL_SCANCODE_TAB:
                 actual_size = !actual_size;

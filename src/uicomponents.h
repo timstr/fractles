@@ -73,7 +73,7 @@ struct Slider1D : GUI::Window {
                 rect.y = 0;
                 int x = rect.x;
                 if (x != old_x){
-                    double diff = (rect.x - start_x) / 100.0 / rect.w / (slider.max - slider.min);
+                    double diff = (rect.x - start_x) / 100.0 / rect.w * (slider.max - slider.min);
                     slider.value = std::min(std::max(start_val + diff, slider.min), slider.max);
                     rect.x = (slider.value - slider.min) / (slider.max - slider.min) * slider.rect.w;
                     g_fractal().rerender = true;

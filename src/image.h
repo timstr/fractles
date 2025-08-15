@@ -81,7 +81,7 @@ struct Image {
             return 0;
         }
     }
-    
+
     void render(int x, int y){
         SDL_Rect _dst;
         _dst.x = x;
@@ -99,7 +99,7 @@ struct Image {
             SDL_RenderFillRect(renderer, &_dst);
         }
     }
-    
+
     void render(Pos pos){
         SDL_Rect _dst;
         _dst.x = pos.x;
@@ -117,7 +117,7 @@ struct Image {
             SDL_RenderFillRect(renderer, &_dst);
         }
     }
-    
+
     void render(Rect& location){
         SDL_Rect _dst;
         _dst.x = location.x;
@@ -133,7 +133,7 @@ struct Image {
             SDL_RenderFillRect(renderer, &_dst);
         }
     }
-    
+
     void render(Rect& location, Rect& slice){
         SDL_Rect _dst;
         _dst.x = location.x;
@@ -172,7 +172,7 @@ struct Image {
             auto msg = std::string("Failed to get SDL window surface: ") + SDL_GetError();
             SDL_ClearError();
             throw std::runtime_error(msg);
-            
+
         }
         assert(window_surface);
         SDL_PixelFormat const* window_surface_format = window_surface->format;
@@ -235,15 +235,15 @@ struct Image {
         SDL_FreeSurface(surface);
     }
 
-    int width(){
+    int width() const {
         return w;
     }
 
-    int height(){
+    int height() const {
         return h;
     }
 
-    Pos size(){
+    Pos size() const {
         return Pos(w, h);
     }
 

@@ -93,6 +93,11 @@ double arctangent(double x, double y){
 double reRange(double val){
     return((1 + val) / 2);
 }
+double triangle(double val){
+    val = (val + 1.0) / 2.0;
+    val -= std::floor(val);
+    return std::abs(1.0 - 2.0 * val);
+}
 
 double transition(double start, double end, double pos){
     return(start + ((end - start) * pos));
@@ -125,7 +130,7 @@ double bellFilter(double x, double a, double b, double c, int mode = 0, double p
 struct complex {
     long double r;
     long double i;
-    
+
     complex(){
         r = 0;
         i = 0;
@@ -210,11 +215,11 @@ struct complex {
         r -= temp;
         return(*this);
     }
-    
+
     complex operator*(complex temp){
         return(complex(((r * temp.r) - (i * temp.i)), ((r * temp.i) + (i * temp.r))));
     }
-    
+
     complex operator*(long double temp){
         return(complex(r * temp, i * temp));
     }
@@ -230,11 +235,11 @@ struct complex {
         i *= temp;
         return(*this);
     }
-    
+
     complex operator/(complex temp){
         return(complex(((r * temp.r) + (i * temp.i)) / ((temp.r * temp.r) + (temp.i * temp.i)), ((i * temp.r) - (r * temp.i)) / ((temp.r * temp.r) + (temp.i * temp.i))));
     }
-    
+
     complex operator/(long double temp){
         return(complex(r / temp, i / temp));
     }
@@ -284,7 +289,7 @@ struct Pos {
     bool operator==(Pos _pos){
         return(x == _pos.x && y == _pos.y);
     }
-    
+
     double abs(){
         return(pythag(x, y));
     }
@@ -437,7 +442,7 @@ Posd Posd_Polar(double ang, double rad = 1){
 }
 struct Rect {
     int x, y, w, h;
-    
+
     Rect(){
         x = 0;
         y = 0;
@@ -484,7 +489,7 @@ struct Rect {
     Pos center(){
         return(Pos(x + w / 2, y + h / 2));
     }
-    
+
     Rect operator+(Pos pos){
         return(Rect(x + pos.x, y + pos.y, w, h));
     }
@@ -577,7 +582,7 @@ void FFT(complex *x, int n){
         }
         j += m;
     };
- 
+
     // here begins the Danielson-Lanczos section
     double wtemp, wr, wpr, wpi, wi, theta;
     double tempr, tempi;
@@ -595,7 +600,7 @@ void FFT(complex *x, int n){
                 j = i + mmax;
                 tempr = wr * _x[j - 1] - wi * _x[j];
                 tempi = wr * _x[j] + wi * _x[j - 1];
- 
+
                 _x[j - 1] = _x[i - 1] - tempr;
                 _x[j] = _x[i] - tempi;
                 _x[i - 1] += tempr;

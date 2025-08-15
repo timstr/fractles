@@ -46,6 +46,15 @@ struct Fractal {
         double C_multiplier_r = 1.0;
         double C_multiplier_i = 0.0;
         Gradient gradient;
+        bool shade = false;
+        double highlight_strength = 0.2;
+        double shade_strength = 0.2;
+        std::string texture_path;
+        std::optional<Image> texture;
+        double texture_x_offset = 0.0;
+        double texture_x_scale = 1.0;
+        double texture_y_offset = 0.0;
+        double texture_y_scale = 1.0;
 
         nlohmann::json to_json() const {
             auto j = nlohmann::json::object();
@@ -80,6 +89,18 @@ struct Fractal {
             j["C_multiplier_i"] = this->C_multiplier_i;
 
             j["gradient"] = this->gradient.to_json();
+
+            j["shade"] = this->shade;
+            j["highlight_strength"] = this->highlight_strength;
+            j["shade_strength"] = this->shade_strength;
+
+            if (this->texture.has_value()) {
+                j["texture_path"] = this->texture_path;
+                j["texture_x_offset"] = this->texture_x_offset;
+                j["texture_x_scale"] = this->texture_x_scale;
+                j["texture_y_offset"] = this->texture_y_offset;
+                j["texture_y_scale"] = this->texture_y_scale;
+            }
 
             return j;
         }
@@ -116,11 +137,26 @@ struct Fractal {
             this->C_multiplier_i = j["C_multiplier_i"].get<double>();
 
             this->gradient.from_json(j["gradient"]);
+
+            this->shade = j.value("shade", false);
+            this->highlight_strength = j.value("highlight_strength", 0.0);
+            this->shade_strength = j.value("shade_strength", 0.0);
+
+            std::string path = j.value("texture_path", std::string(""));
+
+            if (!path.empty()) {
+                this->texture_path = path;
+                this->texture.emplace(path);
+                this->texture_x_offset = j["texture_x_offset"].get<double>();
+                this->texture_x_scale = j["texture_x_scale"].get<double>();
+                this->texture_y_offset = j["texture_y_offset"].get<double>();
+                this->texture_y_scale = j["texture_y_scale"].get<double>();
+            }
         }
     } params;
     bool rerender = true;
 
-    void init(size_t _width, size_t _height, std::optional<std::string> json_path){
+    void init(size_t _width, size_t _height, std::optional<std::string> json_path) {
         workers.resize(worker_count);
         for (size_t i = 0; i < worker_count; ++i) {
             workers[i] = std::make_unique<Worker>();
@@ -135,10 +171,22 @@ struct Fractal {
         if (json_path.has_value()) {
             auto f = std::ifstream(*json_path);
             params.from_json(nlohmann::json::parse(f));
-        } else {
-            params.gradient.randomize(5 + rand() % 11);
         }
     }
+
+    void randomize_gradient() {
+        this->params.gradient.randomize(5 + rand() % 11);
+    }
+
+    void load_texture(std::string path) {
+        this->params.texture_path = path;
+        this->params.texture.emplace(path);
+
+        // Avoid a race condition due to locking
+        // the texture from multiple threads
+        this->params.texture->getPixel(0, 0);
+    }
+
     ~Fractal(){
         abortRender();
         SDL_DestroyTexture(texture);
@@ -502,99 +550,164 @@ struct Fractal {
             data.complete = true;
         }
 
-        static inline Uint32 renderPixel(double x, double y){
+        static inline double evaluateFractal(double x, double y) {
+            Fractal& fractal = g_fractal();
+            Parameters& params = fractal.params;
 
-            double angle = atan2(y - g_fractal().h() / 2, x - g_fractal().w() / 2) + g_fractal().params.rotation;
-            double dist = pythag(x - g_fractal().w() / 2, y - g_fractal().h() / 2);
+            double angle = atan2(y - fractal.h() / 2, x - fractal.w() / 2) + params.rotation;
+            double dist = pythag(x - fractal.w() / 2, y - fractal.h() / 2);
 
-            x = dist * cos(angle) + g_fractal().w() / 2;
-            y = dist * sin(angle) + g_fractal().h() / 2;
+            x = dist * cos(angle) + fractal.w() / 2;
+            y = dist * sin(angle) + fractal.h() / 2;
 
-            double _x = (double)(x - g_fractal().w() / 2) / std::min(g_fractal().w(), g_fractal().h()) / g_fractal().params.magnification + g_fractal().params.x_offset;
-            double _y = (double)(y - g_fractal().h() / 2) / std::min((double)g_fractal().w(), (double)g_fractal().h()) / g_fractal().params.magnification + g_fractal().params.y_offset;
+            double _x = (double)(x - fractal.w() / 2) / std::min(fractal.w(), fractal.h()) / params.magnification + params.x_offset;
+            double _y = (double)(y - fractal.h() / 2) / std::min((double)fractal.w(), (double)fractal.h()) / params.magnification + params.y_offset;
 
             complex Z = 0.0;
             complex C = complex(_y, _x);
-            complex J = complex(g_fractal().params.julia_r, g_fractal().params.julia_i);
-            complex Zx = complex(g_fractal().params.Z_multiplier_r, g_fractal().params.Z_multiplier_i);
-            complex Cx = complex(g_fractal().params.C_multiplier_r, g_fractal().params.C_multiplier_i);
-            complex Jx = complex(g_fractal().params.J_multiplier_r, g_fractal().params.J_multiplier_i);
+            complex J = complex(params.julia_r, params.julia_i);
+            complex Zx = complex(params.Z_multiplier_r, params.Z_multiplier_i);
+            complex Cx = complex(params.C_multiplier_r, params.C_multiplier_i);
+            complex Jx = complex(params.J_multiplier_r, params.J_multiplier_i);
 
-            if (g_fractal().params.Z_init){
+            if (params.Z_init){
                 Z = C;
             }
 
             double it = 0;
 
-            while (it < g_fractal().params.iteration_limit && Z.r * Z.r + Z.i * Z.i < g_fractal().params.escape_limit * g_fractal().params.escape_limit){
+            while (it < params.iteration_limit && Z.r * Z.r + Z.i * Z.i < params.escape_limit * params.escape_limit){
 
-                if (g_fractal().params.pre_add){
+                if (params.pre_add){
                     Z += C;
                 }
 
-                if (g_fractal().params.square_Z){
+                if (params.square_Z){
                     Z = Z * Z;
                 }
 
-                if (g_fractal().params.julia){
+                if (params.julia){
                     Z += J;
                 }
 
-                if (g_fractal().params.J_multiply){
+                if (params.J_multiply){
                     J *= Jx;
                 }
 
-                if (g_fractal().params.mid_add){
+                if (params.mid_add){
                     Z += C;
                 }
 
-                if (g_fractal().params.sponge){
-                    Z += complex(g_fractal().params.sponginess) / Z;
+                if (params.sponge){
+                    Z += complex(params.sponginess) / Z;
                 }
 
-                if (g_fractal().params.box_reflect){
-                    if (Z.r > g_fractal().params.box_reflect_scale){
-                        Z.r = g_fractal().params.box_reflect_scale * 2 - Z.r;
-                    } else if (Z.r < -g_fractal().params.box_reflect_scale){
-                        Z.r = g_fractal().params.box_reflect_scale * -2 - Z.r;
+                if (params.box_reflect){
+                    if (Z.r > params.box_reflect_scale){
+                        Z.r = params.box_reflect_scale * 2 - Z.r;
+                    } else if (Z.r < -params.box_reflect_scale){
+                        Z.r = params.box_reflect_scale * -2 - Z.r;
                     }
 
-                    if (Z.i > g_fractal().params.box_reflect_scale){
-                        Z.i = g_fractal().params.box_reflect_scale * 2 - Z.i;
-                    } else if (Z.i < -g_fractal().params.box_reflect_scale){
-                        Z.i = g_fractal().params.box_reflect_scale * -2 - Z.i;
+                    if (Z.i > params.box_reflect_scale){
+                        Z.i = params.box_reflect_scale * 2 - Z.i;
+                    } else if (Z.i < -params.box_reflect_scale){
+                        Z.i = params.box_reflect_scale * -2 - Z.i;
                     }
                 }
 
-                if (g_fractal().params.ring_reflect){
-                    double abssqr = (Z.r * Z.r + Z.i * Z.i) * g_fractal().params.ring_reflect_scale * g_fractal().params.ring_reflect_scale;
+                if (params.ring_reflect){
+                    double abssqr = (Z.r * Z.r + Z.i * Z.i) * params.ring_reflect_scale * params.ring_reflect_scale;
                     if (sqrt(abssqr) < 0.25){
-                        Z *= 4 * g_fractal().params.ring_reflect_scale;
+                        Z *= 4 * params.ring_reflect_scale;
                     } else if (abssqr < 1){
                         Z /= abssqr;
                     }
                 }
 
-                if (g_fractal().params.post_add){
+                if (params.post_add){
                     Z += C;
                 }
 
-                if (g_fractal().params.Z_multiply){
+                if (params.Z_multiply){
                     Z *= Zx;
                 }
 
-                if (g_fractal().params.C_multiply){
+                if (params.C_multiply){
                     C *= Cx;
                 }
 
                 it += 1;
             }
 
-            if (it < g_fractal().params.iteration_limit){
+            if (it < params.iteration_limit){
                 it += (1 - (log(log(Z.abs())) / log(2)));
             }
 
-            return g_fractal().params.gradient.getColorAt(it / g_fractal().params.iteration_limit).toInt();
+            return it / params.iteration_limit;
+        }
+
+        static inline Uint32 renderPixel(double x, double y){
+            const double v = evaluateFractal(x, y);
+
+            Parameters& params = g_fractal().params;
+
+            Color color;
+            double angle = 0.0;
+
+            if (params.shade || params.texture.has_value()) {
+                const double delta = 0.1;
+                const double dx = (evaluateFractal(x + delta, y) - v) / delta;
+                const double dy = (evaluateFractal(x, y + delta) - v) / delta;
+                angle = std::atan2(dy, dx);
+            }
+
+            if (params.texture.has_value()) {
+                double a = angle / (2.0 * PI);
+                double xscale = params.texture_x_scale == 0.0 ? 0.0 : std::exp(params.texture_x_scale - 1.0);
+                double yscale = params.texture_y_scale == 0.0 ? 0.0 : std::exp(params.texture_y_scale - 1.0);
+                const double pxd = (triangle(a * xscale + params.texture_x_offset)) * static_cast<double>(params.texture->width());
+                const double pyd = (triangle(v * yscale + params.texture_y_offset)) * static_cast<double>(params.texture->height());
+                const double fpxd = std::floor(pxd);
+                const double fpyd = std::floor(pyd);
+                const double dx = pxd - fpxd;
+                const double dy = pyd - fpyd;
+                const int pxi = static_cast<int>(fpxd);
+                const int pyi = static_cast<int>(fpyd);
+                Color c00 = params.texture->getPixel(pxi % params.texture->width(), pyi % params.texture->height());
+                Color c10 = params.texture->getPixel((pxi + 1) % params.texture->width(), pyi % params.texture->height());
+                Color c01 = params.texture->getPixel(pxi % params.texture->width(), (pyi + 1) % params.texture->height());
+                Color c11 = params.texture->getPixel((pxi + 1) % params.texture->width(), (pyi + 1) % params.texture->height());
+                Color c0 = Color(
+                    (1.0 - dx) * c00.getR() + dx * c10.getR(),
+                    (1.0 - dx) * c00.getG() + dx * c10.getG(),
+                    (1.0 - dx) * c00.getB() + dx * c10.getB()
+                );
+                Color c1 = Color(
+                    (1.0 - dx) * c01.getR() + dx * c11.getR(),
+                    (1.0 - dx) * c01.getG() + dx * c11.getG(),
+                    (1.0 - dx) * c01.getB() + dx * c11.getB()
+                );
+                color.setR((1.0 - dy) * c0.getR() + dy * c1.getR());
+                color.setG((1.0 - dy) * c0.getG() + dy * c1.getG());
+                color.setB((1.0 - dy) * c0.getB() + dy * c1.getB());
+            } else {
+                color = params.gradient.getColorAt(v);
+            }
+
+            if (params.shade) {
+                const double sin_angle = std::sin(angle);
+                const double color_change = sin_angle * (
+                    sin_angle > 0
+                    ? params.highlight_strength
+                    : params.shade_strength
+                );
+
+                color.setV(color.getV() + color_change);
+                color.setS(color.getS() + std::abs(color_change));
+            }
+
+            return color.toInt();
         }
     };
     std::vector<std::unique_ptr<Worker>> workers;
