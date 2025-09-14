@@ -34,10 +34,15 @@ int main(int argc, char** argv){
             texture_path = argv[i + 1];
             i += 2;
         } else {
-            json_path = std::string(argv[1]);
+            std::string path = argv[1];
+            if (path.size() >= 4 && path.substr(path.size() - 4) == ".png") {
+                path = path.substr(0, path.size() - 4) + ".json";
+            }
+            json_path = path;
             i += 1;
         }
     }
+
 
     g_fractal().init(1000, 700, json_path);
 

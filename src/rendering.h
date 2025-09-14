@@ -663,7 +663,7 @@ struct Fractal {
             }
 
             if (params.texture.has_value()) {
-                double a = angle / (2.0 * PI);
+                double a = 0.5 + angle / (2.0 * PI);
                 double xscale = params.texture_x_scale == 0.0 ? 0.0 : std::exp(params.texture_x_scale - 1.0);
                 double yscale = params.texture_y_scale == 0.0 ? 0.0 : std::exp(params.texture_y_scale - 1.0);
                 const double pxd = (triangle(a * xscale + params.texture_x_offset)) * static_cast<double>(params.texture->width());
